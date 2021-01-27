@@ -1,6 +1,6 @@
 {
   "name": "ximple",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Simple event library inspired by rxjs",
   "main": "dist/index.js",
   "scripts": {
