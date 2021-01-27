@@ -1,0 +1,21 @@
+{
+  "name": "ximple",
+  "version": "1.0.0",
+  "description": "Simple event library inspired by rxjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "github.com/oysmal/ximple.git"
+  },
+  "keywords": [
+    "event",
+    "subject",
+    "typescript",
+    "stream"
+  ],
+  "author": "Øystein Ivar Malt",
+  "license": "LGPL-3.0-or-later"
+}
