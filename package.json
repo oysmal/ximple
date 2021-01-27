@@ -2,14 +2,21 @@
   "name": "ximple",
   "version": "1.0.0",
   "description": "Simple event library inspired by rxjs",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
+    "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "repository": {
     "type": "git",
     "url": "github.com/oysmal/ximple.git"
   },
+  "homepage": "https://github.com/oysmal/ximple/#readme",
   "keywords": [
     "event",
     "subject",
@@ -17,5 +24,8 @@
     "stream"
   ],
   "author": "Øystein Ivar Malt",
-  "license": "LGPL-3.0-or-later"
+  "license": "LGPL-3.0-or-later",
+  "devDependencies": {
+    "typescript": "^4.1.3"
+  }
 }
