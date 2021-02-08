@@ -8,7 +8,12 @@ export interface IProcessEvent<T> {
     stopPropagation?: boolean;
 }
 
-export class Subject<T> {
+export interface IObservable<T> {
+    subscribe(notify: (event: T) => void): () => void;
+    pipe<S>(processFn: (value: any) => IProcessEvent<S>): IObservable<S>;
+}
+
+export class Subject<T> implements IObservable<T>{
     protected static idgen = 0;
     protected readonly subscribers: ISubscriber<T>[];
     public _unsubscribeFromParent?: () => void = undefined;
@@ -38,7 +43,7 @@ export class Subject<T> {
         return this._subscribe(notify);
     }
 
-    public pipe<S>(processFn: (value: any) => IProcessEvent<S>) {
+    public pipe<S>(processFn: (value: any) => IProcessEvent<S>): IObservable<S> {
         const subj = new Subject<S>();
 
         subj._unsubscribeFromParent = this.subscribe((event) => {
