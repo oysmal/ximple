@@ -26,7 +26,7 @@ export class Subject<T> implements IObservable<T>{
         this.subscribers.forEach((s) => s.notify(value));
     }
 
-    public next(value: T) {
+    public next = (value: T) => {
         this._next(value);
     }
 
@@ -39,11 +39,11 @@ export class Subject<T> implements IObservable<T>{
         return () => this.unsubscribe(sub);
     }
 
-    public subscribe(notify: (event: T) => void) {
+    public subscribe = (notify: (event: T) => void) => {
         return this._subscribe(notify);
     }
 
-    public pipe<S>(processFn: (value: any) => IProcessEvent<S>): IObservable<S> {
+    public pipe = <S>(processFn: (value: any) => IProcessEvent<S>): IObservable<S> => {
         const subj = new Subject<S>();
 
         subj._unsubscribeFromParent = this.subscribe((event) => {
@@ -78,12 +78,12 @@ export class BehaviorSubject<T> extends Subject<T> {
         return this._value;
     }
 
-    public next(value: T) {
+    public next = (value: T) => {
         this._value = value;
         this._next(value);
     }
 
-    public subscribe(notify: (event: T) => void) {
+    public subscribe = (notify: (event: T) => void) => {
         notify(this._value);
         return this._subscribe(notify);
     }
