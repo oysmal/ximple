@@ -6,16 +6,20 @@ export type Atom<T, S = T> = {
   update: (value: S) => void;
 };
 
-export function atom<T, S = T>({
+export function atom<T, S = T, U = T>({
   initialValue,
   persistKey,
   update,
   appVersion,
+  transformOnDeserialize,
+  transformOnSerialize,
 }: {
   initialValue: T;
   persistKey?: string;
   update?: (state: T, value: S) => T;
   appVersion?: string;
+  transformOnSerialize?: (obj: T) => U;
+  transformOnDeserialize?: (obj: U) => T;
 }): Atom<T, S> {
   let persistedValue: T | undefined = undefined;
 
@@ -27,6 +31,9 @@ export function atom<T, S = T>({
       localStorage.removeItem(persistKey);
     } else {
       persistedValue = storedJson.data;
+      if (transformOnDeserialize && storedJson.data) {
+        persistedValue = transformOnDeserialize(storedJson.data);
+      }
     }
   }
 
@@ -34,9 +41,14 @@ export function atom<T, S = T>({
 
   if (persistKey) {
     subject.pipe((value: T) => {
+      let data: T | U = value;
+      if (transformOnSerialize) {
+        data = transformOnSerialize(value);
+      }
+
       localStorage.setItem(
         persistKey,
-        JSON.stringify({ data: value, version: appVersion })
+        JSON.stringify({ data, version: appVersion })
       );
       return { value, stopPropagation: true };
     });
