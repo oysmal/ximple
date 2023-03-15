@@ -81,6 +81,7 @@ export class BehaviorSubject<T> extends Subject<T> {
   }
 
   public next = (value: T) => {
+    if (this._value === value) return;
     this._value = value;
     this._next(value);
   };
