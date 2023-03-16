@@ -13,6 +13,7 @@ export function atom<T, S = T, U = T>({
   appVersion,
   transformOnDeserialize,
   transformOnSerialize,
+  equalityCompareFn,
 }: {
   initialValue: T;
   persistKey?: string;
@@ -20,6 +21,7 @@ export function atom<T, S = T, U = T>({
   appVersion?: string;
   transformOnSerialize?: (obj: T) => U;
   transformOnDeserialize?: (obj: U) => T;
+  equalityCompareFn?: (newValue: T, oldValue?: T) => boolean;
 }): Atom<T, S> {
   let persistedValue: T | undefined = undefined;
 
@@ -37,7 +39,9 @@ export function atom<T, S = T, U = T>({
     }
   }
 
-  const subject = new BehaviorSubject<T>(persistedValue ?? initialValue);
+  const subject = new BehaviorSubject<T>(persistedValue ?? initialValue, {
+    equalityCompareFn,
+  });
 
   if (persistKey) {
     subject.pipe((value: T) => {

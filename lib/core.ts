@@ -15,22 +15,32 @@ export interface IObservable<T> {
   ): IObservable<S>;
 }
 
+type SubjectConfig<T> = Partial<{
+  equalityCompareFn: (newValue: T, oldValue?: T) => boolean;
+}>;
+
 export class Subject<T> implements IObservable<T> {
   protected static idgen = 0;
   protected readonly subscribers: ISubscriber<T>[];
   public _unsubscribeFromParent?: () => void = undefined;
-  protected previousValue: T | undefined = undefined;
+  protected _previousValue: T | undefined = undefined;
+  protected equalityCompareFn: (newValue: T, oldValue?: T) => boolean = (
+    newValue,
+    oldValue
+  ) => newValue === oldValue;
 
-  constructor(previousValue?: T) {
+  constructor(config?: SubjectConfig<T>) {
     this.subscribers = [];
-    this.previousValue = previousValue;
+    if (config?.equalityCompareFn) {
+      this.equalityCompareFn = config.equalityCompareFn;
+    }
   }
 
   protected _next(value: T) {
-    if (value !== this.previousValue) {
+    if (!this.equalityCompareFn(value, this._previousValue)) {
       this.subscribers.forEach((s) => s.notify(value));
     }
-    this.previousValue = value;
+    this._previousValue = value;
   }
 
   public next = (value: T) => {
@@ -56,7 +66,7 @@ export class Subject<T> implements IObservable<T> {
     const subj = new Subject<S>();
 
     subj._unsubscribeFromParent = this.subscribe((event) => {
-      const processedEvent = processFn(event, this.previousValue);
+      const processedEvent = processFn(event, this._previousValue);
       if (processedEvent.stopPropagation) {
         return;
       } else {
@@ -78,9 +88,13 @@ export class Subject<T> implements IObservable<T> {
 export class BehaviorSubject<T> extends Subject<T> {
   private _value: T;
 
-  constructor(initialValue: T) {
-    super(initialValue);
+  constructor(
+    initialValue: T,
+    config?: Omit<SubjectConfig<T>, "previousValue">
+  ) {
+    super(config);
     this._value = initialValue;
+    this._previousValue = initialValue;
   }
 
   public get value() {
@@ -106,7 +120,7 @@ export class BehaviorSubject<T> extends Subject<T> {
       : new BehaviorSubject<S>(defaultValue.value);
 
     subj._unsubscribeFromParent = this.subscribe((event) => {
-      const processedEvent = processFn(event, this.previousValue);
+      const processedEvent = processFn(event, this._previousValue);
       if (processedEvent.stopPropagation) {
         return;
       } else {
