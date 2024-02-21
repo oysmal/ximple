@@ -17,7 +17,7 @@ export function atom<T, S = T, U = T>({
 }: {
   initialValue: T;
   persistKey?: string;
-  update?: (state: T, value: S) => T;
+  update?: (state: T, value: S) => Promise<T>;
   appVersion?: string;
   transformOnSerialize?: (obj: T) => U;
   transformOnDeserialize?: (obj: U) => T;
