@@ -1,37 +1,37 @@
 {
-  "name": "ximple",
-  "version": "2.3.0",
-  "description": "Simple event and atomic state library inspired by RxJS, Recoil and Jotai",
-  "main": "dist/index.js",
-  "type": "module",
-  "scripts": {
-    "build": "tsc",
-    "package": "node tooling/package.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "github.com/oysmal/ximple.git"
-  },
-  "homepage": "https://github.com/oysmal/ximple/#readme",
-  "keywords": [
-    "event",
-    "subject",
-    "typescript",
-    "stream",
-    "state",
-    "atom",
-    "atomic"
-  ],
-  "author": "Øystein Ivar Malt",
-  "license": "MIT",
-  "devDependencies": {
-    "@types/react": "^18.0.26",
-    "react": ">=17",
-    "typescript": "^4.9.4"
-  },
-  "peerDependencies": {
-    "react": ">=17"
-  },
-  "dependencies": {}
+    "name": "ximple",
+    "version": "2.4.0",
+    "description": "Simple event and atomic state library inspired by RxJS, Recoil and Jotai",
+    "main": "dist/index.js",
+    "type": "module",
+    "scripts": {
+        "build": "tsc",
+        "package": "node tooling/package.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "github.com/oysmal/ximple.git"
+    },
+    "homepage": "https://github.com/oysmal/ximple/#readme",
+    "keywords": [
+        "event",
+        "subject",
+        "typescript",
+        "stream",
+        "state",
+        "atom",
+        "atomic"
+    ],
+    "author": "Øystein Ivar Malt",
+    "license": "MIT",
+    "devDependencies": {
+        "@types/react": "^18.0.26",
+        "react": ">=17",
+        "typescript": "^4.9.4"
+    },
+    "peerDependencies": {
+        "react": ">=17"
+    },
+    "dependencies": {}
 }

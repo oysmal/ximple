@@ -3,7 +3,7 @@ import { BehaviorSubject } from "./core";
 
 export type Atom<T, S = T> = {
   subject: BehaviorSubject<T>;
-  update: (value: S) => void;
+  update: (value: S) => Promise<void>;
 };
 
 export function atom<T, S = T, U = T>({
@@ -58,9 +58,9 @@ export function atom<T, S = T, U = T>({
     });
   }
 
-  const updateFunction = (value: S) =>
+  const updateFunction = async (value: S) =>
     update
-      ? subject.next(update(subject.value, value))
+      ? subject.next(await update(subject.value, value))
       : subject.next(value as unknown as T);
 
   return { subject, update: updateFunction };
