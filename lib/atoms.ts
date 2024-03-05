@@ -14,6 +14,8 @@ export function atom<T, S = T, U = T>({
   transformOnDeserialize,
   transformOnSerialize,
   equalityCompareFn,
+  concurrency = "queue",
+  concurrencyTime = Number.MAX_SAFE_INTEGER,
 }: {
   initialValue: T;
   persistKey?: string;
@@ -22,6 +24,8 @@ export function atom<T, S = T, U = T>({
   transformOnSerialize?: (obj: T) => U;
   transformOnDeserialize?: (obj: U) => T;
   equalityCompareFn?: (newValue: T, oldValue?: T) => boolean;
+  concurrency?: "queue" | "throttle" | "debounce";
+  concurrencyTime?: number;
 }): Atom<T, S> {
   let persistedValue: T | undefined = undefined;
 
@@ -58,10 +62,70 @@ export function atom<T, S = T, U = T>({
     });
   }
 
-  const updateFunction = async (value: S) =>
-    update
-      ? subject.next(await update(subject.value, value))
-      : subject.next(value as unknown as T);
+  let idgen = 0;
+  // Handle updates to the atom, taking in to account concurrency rules
+  // Default is queue, which means all updates are processed in order
+  // First means only the first update is processed, and the rest are ignored
+  // Last means only the last update is processed, and the rest are ignored
+  const updateFunction = async (value: S) => {
+    if (
+      updateFunction.queue.length > 0 &&
+      concurrency === "throttle" &&
+      Date.now() - updateFunction.queue[0].timestamp <= concurrencyTime
+    ) {
+      return;
+    }
+
+    let resolver = (a: any) => a;
+    const updatePromise = new Promise<any>((res) => {
+      resolver = res;
+    });
+
+    if (concurrency === "debounce") {
+      updateFunction.queue.forEach((x) => {
+        if (Date.now() - x.timestamp < concurrencyTime) x.skip = true;
+      });
+      updateFunction.queue = [];
+    }
+
+    const id = idgen++;
+    const queueItem = {
+      id,
+      updatePromise,
+      skip: false,
+      timestamp: Date.now(),
+    };
+    updateFunction.queue.push(queueItem);
+
+    if (concurrency === "queue") {
+      await Promise.all(
+        updateFunction.queue.slice(0, -1).map((x) => x.updatePromise)
+      );
+    }
+
+    const newValue = update
+      ? await update(subject.value, value)
+      : (value as unknown as T);
+
+    if (concurrency === "debounce" && queueItem.skip) {
+      return;
+    }
+
+    subject.next(newValue);
+
+    updateFunction.queue.splice(
+      updateFunction.queue.findIndex((x) => x.id === id),
+      1
+    );
+    resolver(newValue);
+  };
+
+  updateFunction.queue = [] as {
+    id: number;
+    updatePromise: Promise<T>;
+    skip?: boolean;
+    timestamp: number;
+  }[];
 
   return { subject, update: updateFunction };
 }
