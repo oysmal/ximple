@@ -1,5 +1,5 @@
 import { atom } from '../dist/atoms.js';
-import { expect, describe, it } from "vitest";
+import { expect, describe, it } from 'vitest';
 
 describe('Atom basics', () => {
   it('should be possible to update state', async () => {
@@ -182,5 +182,36 @@ describe('Atom concurrency', () => {
     const p6 = a.update({ val: 6, timeout: 100 });
     await Promise.all([p4, p5, p6]);
     expect(a.subject.value).toStrictEqual([3, 6]);
+  });
+});
+
+describe('Async transformOnDeserialize', () => {
+  it('should be possible to run ascynchronous version of transformOnDeserialize', async () => {
+    const localStorageMap = new Map<string, string>();
+    localStorageMap.set('test', JSON.stringify({ data: [{ val: 1 }, { val: 2 }, { val: 3 }], version: '1.0.0' }));
+    globalThis.localStorage = {
+      getItem: (key: string) => localStorageMap.get(key) ?? null,
+      setItem: (key: string, value: string) => localStorageMap.set(key, value),
+      length: 0,
+      clear: () => localStorageMap.clear(),
+      key: () => '',
+      removeItem: (key: string) => localStorageMap.delete(key),
+    };
+
+    const a = atom({
+      initialValue: [] as { val: number }[],
+      persistKey: 'test',
+      appVersion: '1.0.0',
+      transformOnDeserialize: async (value) => {
+        await new Promise((res) => setTimeout(res, 100));
+        return value;
+      },
+    });
+
+    expect(a.subject.value).toStrictEqual([]);
+
+    await new Promise((res) => setTimeout(res, 200));
+
+    expect(a.subject.value).toStrictEqual([{ val: 1 }, { val: 2 }, { val: 3 }]);
   });
 });
