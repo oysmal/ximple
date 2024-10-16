@@ -16,7 +16,6 @@ export function atom<T, S = T, U = T>({
   equalityCompareFn,
   concurrency = 'queue',
   concurrencyTime = Number.MAX_SAFE_INTEGER,
-  debugLogger,
 }: {
   initialValue: T;
   persistKey?: string;
@@ -27,7 +26,6 @@ export function atom<T, S = T, U = T>({
   equalityCompareFn?: (newValue: T, oldValue?: T) => boolean;
   concurrency?: 'queue' | 'throttle' | 'debounce';
   concurrencyTime?: number;
-  debugLogger?: (message: any, ...args: any[]) => void;
 }): Atom<T, S> {
   const subject = new BehaviorSubject<T>(initialValue, {
     equalityCompareFn,
@@ -43,17 +41,13 @@ export function atom<T, S = T, U = T>({
     } else if (transformOnDeserialize && storedJson.data) {
       let deserialized = transformOnDeserialize(storedJson.data);
       if (deserialized instanceof Promise) {
-        debugLogger?.('deserialized is a promise');
         deserialized.then((value) => {
-          debugLogger?.('deserialized resolved', value);
           subject.next(value);
         });
       } else {
-        debugLogger?.('deserialized is not a promise', deserialized);
         subject.next(deserialized);
       }
     } else if (storedJson?.data !== undefined) {
-      debugLogger?.('storedJson.data', storedJson.data);
       subject.next(storedJson.data);
     }
 
@@ -61,15 +55,12 @@ export function atom<T, S = T, U = T>({
     subject.pipe((value: T) => {
       (async () => {
         let data: T | U | Promise<T | U> = value;
-        debugLogger?.('transformOnSerialize', data);
         if (transformOnSerialize) {
           data = transformOnSerialize(value);
-          debugLogger?.('transformOnSerialize', data);
           if (data instanceof Promise) {
             data = await data;
           }
         }
-        debugLogger?.('setting localStorage', { data, version: appVersion });
         localStorage.setItem(persistKey, JSON.stringify({ data, version: appVersion }));
       })();
       return { value, stopPropagation: true };
