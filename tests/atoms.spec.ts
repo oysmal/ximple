@@ -186,6 +186,32 @@ describe("Atom concurrency", () => {
 });
 
 describe("Async transformOnDeserialize", () => {
+  it("Should handle null / undefined values for potential promises", async () => {
+    const localStorageMap = new Map<string, string>();
+    globalThis.localStorage = {
+      getItem: (key: string) => localStorageMap.get(key) ?? null,
+      setItem: (key: string, value: string) => localStorageMap.set(key, value),
+      length: 0,
+      clear: () => localStorageMap.clear(),
+      key: () => "",
+      removeItem: (key: string) => localStorageMap.delete(key),
+    };
+    const a = atom({
+      initialValue: null as null | { val: number }[],
+      persistKey: "test",
+      appVersion: "1.0.0",
+      transformOnDeserialize: (value) => value,
+      transformOnSerialize: (value) => value,
+    });
+
+    await new Promise((res) => setTimeout(res, 100));
+    expect(a.subject.value).toStrictEqual(null);
+    await a.update([{ val: 2 }]);
+    expect(a.subject.value).toStrictEqual([{ val: 2 }]);
+    await a.update(null);
+    expect(a.subject.value).toBe(null);
+  });
+
   it("Should be possible to run synchronous version of transformOnDeserialize", async () => {
     const localStorageMap = new Map<string, string>();
     localStorageMap.set(

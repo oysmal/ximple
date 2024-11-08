@@ -151,5 +151,9 @@ export function useAtom<T, S = T>(atom: Atom<T, S>): [T, (value: S) => void] {
 }
 
 function isPromise<T>(value: T | Promise<T>): value is Promise<T> {
-  return typeof value === "object" && typeof (value as any).then === "function";
+  return (
+    value &&
+    typeof value === "object" &&
+    typeof (value as any).then === "function"
+  );
 }
