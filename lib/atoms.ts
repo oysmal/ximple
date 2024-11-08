@@ -57,7 +57,7 @@ export function atom<T, S = T, U = T>({
         let data: T | U | Promise<T | U> = value;
         if (transformOnSerialize) {
           data = transformOnSerialize(value);
-          if (data instanceof Promise) {
+          if (isPromise(data)) {
             data = await data;
           }
         }
