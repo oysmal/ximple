@@ -1,15 +1,15 @@
-import { atom } from '../dist/atoms.js';
-import { expect, describe, it } from 'vitest';
+import { atom } from "../dist/atoms.js";
+import { expect, describe, it } from "vitest";
 
-describe('Atom basics', () => {
-  it('should be possible to update state', async () => {
+describe("Atom basics", () => {
+  it("should be possible to update state", async () => {
     const a = atom({ initialValue: 0 });
     expect(a.subject.value).toBe(0);
     await a.update(1);
     expect(a.subject.value).toBe(1);
   });
 
-  it('should be possible to update state with an update function', async () => {
+  it("should be possible to update state with an update function", async () => {
     const a = atom({ initialValue: 0, update: (a, b) => a + b });
     expect(a.subject.value).toBe(0);
     await a.update(1);
@@ -19,11 +19,11 @@ describe('Atom basics', () => {
   });
 });
 
-describe('Atom concurrency', () => {
+describe("Atom concurrency", () => {
   it("should be possible to update atom with concurrency 'throttle'", async () => {
     const a = atom({
       initialValue: 0,
-      concurrency: 'throttle',
+      concurrency: "throttle",
       update: async (state, action) => {
         await new Promise((res) => setTimeout(res, 100));
         return state + action;
@@ -40,7 +40,7 @@ describe('Atom concurrency', () => {
   it("should be possible use 'throttle' with concurrencyTime", async () => {
     const a = atom({
       initialValue: 0,
-      concurrency: 'throttle',
+      concurrency: "throttle",
       concurrencyTime: 200,
       update: async (state, action) => {
         await new Promise((res) => setTimeout(res, 200));
@@ -65,7 +65,7 @@ describe('Atom concurrency', () => {
   it("should be possible to update atom with concurrency 'debounce'", async () => {
     const a = atom({
       initialValue: 0,
-      concurrency: 'debounce',
+      concurrency: "debounce",
       update: async (state, action) => {
         await new Promise((res) => setTimeout(res, 100));
         return state + action;
@@ -82,7 +82,7 @@ describe('Atom concurrency', () => {
   it("should be possible to use 'debounce' with concurrencyTime", async () => {
     const a = atom({
       initialValue: 0,
-      concurrency: 'debounce',
+      concurrency: "debounce",
       concurrencyTime: 200,
       update: async (state, action) => {
         await new Promise((res) => setTimeout(res, 100));
@@ -107,7 +107,7 @@ describe('Atom concurrency', () => {
   it("should be possible to update atom with concurrency 'queue'", async () => {
     const a = atom({
       initialValue: 0,
-      concurrency: 'queue',
+      concurrency: "queue",
       update: async (state, action) => {
         await new Promise((res) => setTimeout(res, 100));
         return state + action;
@@ -121,10 +121,10 @@ describe('Atom concurrency', () => {
     expect(a.subject.value).toBe(6);
   });
 
-  it('should respect queue order even if the last promises resolves first', async () => {
+  it("should respect queue order even if the last promises resolves first", async () => {
     const a = atom({
       initialValue: [] as number[],
-      concurrency: 'queue',
+      concurrency: "queue",
       update: async (state, action: { val: number; timeout: number }) => {
         await new Promise((res) => setTimeout(res, action.timeout));
         return [...state, action.val];
@@ -138,10 +138,10 @@ describe('Atom concurrency', () => {
     expect(a.subject.value).toStrictEqual([1, 2, 3]);
   });
 
-  it('should respect throttle concurrency even if the last promises resolves first', async () => {
+  it("should respect throttle concurrency even if the last promises resolves first", async () => {
     const a = atom({
       initialValue: [] as number[],
-      concurrency: 'throttle',
+      concurrency: "throttle",
       update: async (state, action: { val: number; timeout: number }) => {
         await new Promise((res) => setTimeout(res, action.timeout));
         return [...state, action.val];
@@ -161,10 +161,10 @@ describe('Atom concurrency', () => {
     expect(a.subject.value).toStrictEqual([1, 4]);
   });
 
-  it('should respect debounce concurrency even if the last promises resolves first', async () => {
+  it("should respect debounce concurrency even if the last promises resolves first", async () => {
     const a = atom({
       initialValue: [] as number[],
-      concurrency: 'debounce',
+      concurrency: "debounce",
       update: async (state, action: { val: number; timeout: number }) => {
         await new Promise((res) => setTimeout(res, action.timeout));
         return [...state, action.val];
@@ -185,23 +185,57 @@ describe('Atom concurrency', () => {
   });
 });
 
-describe('Async transformOnDeserialize', () => {
-  it('should be possible to run ascynchronous version of transformOnDeserialize', async () => {
+describe("Async transformOnDeserialize", () => {
+  it("Should be possible to run synchronous version of transformOnDeserialize", async () => {
     const localStorageMap = new Map<string, string>();
-    localStorageMap.set('test', JSON.stringify({ data: [{ val: 1 }, { val: 2 }, { val: 3 }], version: '1.0.0' }));
+    localStorageMap.set(
+      "test",
+      JSON.stringify({
+        data: [{ val: 1 }, { val: 2 }, { val: 3 }],
+        version: "1.0.0",
+      }),
+    );
     globalThis.localStorage = {
       getItem: (key: string) => localStorageMap.get(key) ?? null,
       setItem: (key: string, value: string) => localStorageMap.set(key, value),
       length: 0,
       clear: () => localStorageMap.clear(),
-      key: () => '',
+      key: () => "",
+      removeItem: (key: string) => localStorageMap.delete(key),
+    };
+    const a = atom({
+      initialValue: [] as { val: number }[],
+      persistKey: "test",
+      appVersion: "1.0.0",
+      transformOnDeserialize: (value) =>
+        value.map((v: { val: number }) => ({ val: v.val + 1 })),
+    });
+
+    expect(a.subject.value).toStrictEqual([{ val: 2 }, { val: 3 }, { val: 4 }]);
+  });
+
+  it("should be possible to run ascynchronous version of transformOnDeserialize", async () => {
+    const localStorageMap = new Map<string, string>();
+    localStorageMap.set(
+      "test",
+      JSON.stringify({
+        data: [{ val: 1 }, { val: 2 }, { val: 3 }],
+        version: "1.0.0",
+      }),
+    );
+    globalThis.localStorage = {
+      getItem: (key: string) => localStorageMap.get(key) ?? null,
+      setItem: (key: string, value: string) => localStorageMap.set(key, value),
+      length: 0,
+      clear: () => localStorageMap.clear(),
+      key: () => "",
       removeItem: (key: string) => localStorageMap.delete(key),
     };
 
     const a = atom({
       initialValue: [] as { val: number }[],
-      persistKey: 'test',
-      appVersion: '1.0.0',
+      persistKey: "test",
+      appVersion: "1.0.0",
       transformOnDeserialize: async (value) => {
         await new Promise((res) => setTimeout(res, 100));
         return value;

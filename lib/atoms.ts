@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { BehaviorSubject } from './core';
+import { useCallback, useEffect, useState } from "react";
+import { BehaviorSubject } from "./core";
 
 export type Atom<T, S = T> = {
   subject: BehaviorSubject<T>;
@@ -14,7 +14,7 @@ export function atom<T, S = T, U = T>({
   transformOnDeserialize,
   transformOnSerialize,
   equalityCompareFn,
-  concurrency = 'queue',
+  concurrency = "queue",
   concurrencyTime = Number.MAX_SAFE_INTEGER,
 }: {
   initialValue: T;
@@ -24,7 +24,7 @@ export function atom<T, S = T, U = T>({
   transformOnSerialize?: (obj: T) => U | Promise<U>;
   transformOnDeserialize?: (obj: U) => T | Promise<T>;
   equalityCompareFn?: (newValue: T, oldValue?: T) => boolean;
-  concurrency?: 'queue' | 'throttle' | 'debounce';
+  concurrency?: "queue" | "throttle" | "debounce";
   concurrencyTime?: number;
 }): Atom<T, S> {
   const subject = new BehaviorSubject<T>(initialValue, {
@@ -33,14 +33,14 @@ export function atom<T, S = T, U = T>({
 
   if (persistKey) {
     // Load from storage after the atom is created
-    const storedJson = JSON.parse(localStorage.getItem(persistKey) ?? '{}');
+    const storedJson = JSON.parse(localStorage.getItem(persistKey) ?? "{}");
 
     // Remove from storage if version has been updated
     if (storedJson.version !== appVersion) {
       localStorage.removeItem(persistKey);
     } else if (transformOnDeserialize && storedJson.data) {
       let deserialized = transformOnDeserialize(storedJson.data);
-      if (deserialized instanceof Promise) {
+      if (isPromise(deserialized)) {
         deserialized.then((value) => {
           subject.next(value);
         });
@@ -61,7 +61,10 @@ export function atom<T, S = T, U = T>({
             data = await data;
           }
         }
-        localStorage.setItem(persistKey, JSON.stringify({ data, version: appVersion }));
+        localStorage.setItem(
+          persistKey,
+          JSON.stringify({ data, version: appVersion }),
+        );
       })();
       return { value, stopPropagation: true };
     });
@@ -75,7 +78,7 @@ export function atom<T, S = T, U = T>({
   const updateFunction = async (value: S) => {
     if (
       updateFunction.queue.length > 0 &&
-      concurrency === 'throttle' &&
+      concurrency === "throttle" &&
       Date.now() - updateFunction.queue[0].timestamp <= concurrencyTime
     ) {
       return;
@@ -86,7 +89,7 @@ export function atom<T, S = T, U = T>({
       resolver = res;
     });
 
-    if (concurrency === 'debounce') {
+    if (concurrency === "debounce") {
       updateFunction.queue.forEach((x) => {
         if (Date.now() - x.timestamp < concurrencyTime) x.skip = true;
       });
@@ -102,13 +105,17 @@ export function atom<T, S = T, U = T>({
     };
     updateFunction.queue.push(queueItem);
 
-    if (concurrency === 'queue') {
-      await Promise.all(updateFunction.queue.slice(0, -1).map((x) => x.updatePromise));
+    if (concurrency === "queue") {
+      await Promise.all(
+        updateFunction.queue.slice(0, -1).map((x) => x.updatePromise),
+      );
     }
 
-    const newValue = update ? await update(subject.value, value) : (value as unknown as T);
+    const newValue = update
+      ? await update(subject.value, value)
+      : (value as unknown as T);
 
-    if (concurrency === 'debounce' && queueItem.skip) {
+    if (concurrency === "debounce" && queueItem.skip) {
       return;
     }
 
@@ -116,7 +123,7 @@ export function atom<T, S = T, U = T>({
 
     updateFunction.queue.splice(
       updateFunction.queue.findIndex((x) => x.id === id),
-      1
+      1,
     );
     resolver(newValue);
   };
@@ -141,4 +148,8 @@ export function useAtom<T, S = T>(atom: Atom<T, S>): [T, (value: S) => void] {
   }, []);
 
   return [data, update];
+}
+
+function isPromise<T>(value: T | Promise<T>): value is Promise<T> {
+  return typeof value === "object" && typeof (value as any).then === "function";
 }
