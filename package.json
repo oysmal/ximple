@@ -1,6 +1,6 @@
 {
     "name": "ximple",
-    "version": "2.6.3",
+    "version": "2.6.4",
     "description": "Simple event and atomic state library inspired by RxJS, Recoil and Jotai",
     "main": "dist/index.js",
     "type": "module",
