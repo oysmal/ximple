@@ -31,6 +31,9 @@ export function atom<T, S = T, U = T>({
     equalityCompareFn,
   });
 
+  const updatesWhileDeserializing: S[] = [];
+  let initPersistanceIsRunning = false;
+
   if (persistKey) {
     // Load from storage after the atom is created
     const storedJson = JSON.parse(localStorage.getItem(persistKey) ?? "{}");
@@ -41,8 +44,18 @@ export function atom<T, S = T, U = T>({
     } else if (transformOnDeserialize && storedJson.data) {
       let deserialized = transformOnDeserialize(storedJson.data);
       if (isPromise(deserialized)) {
-        deserialized.then((value) => {
+        initPersistanceIsRunning = true;
+        deserialized.then(async (value) => {
           subject.next(value);
+          initPersistanceIsRunning = false;
+          await Promise.all(
+            updatesWhileDeserializing.map(async (updatedValue) => {
+              const newValue = update
+                ? await update(subject.value, updatedValue)
+                : (updatedValue as unknown as T);
+              subject.next(newValue);
+            }),
+          );
         });
       } else {
         subject.next(deserialized);
@@ -55,6 +68,7 @@ export function atom<T, S = T, U = T>({
     subject.pipe((value: T) => {
       (async () => {
         let data: T | U | Promise<T | U> = value;
+        if (initPersistanceIsRunning) return;
         if (transformOnSerialize) {
           data = transformOnSerialize(value);
           if (isPromise(data)) {
@@ -73,9 +87,13 @@ export function atom<T, S = T, U = T>({
   let idgen = 0;
   // Handle updates to the atom, taking in to account concurrency rules
   // Default is queue, which means all updates are processed in order
-  // First means only the first update is processed, and the rest are ignored
-  // Last means only the last update is processed, and the rest are ignored
+  // Throttle means only the first update is processed, and the rest are ignored
+  // Debounce means only the last update is processed, and the rest are ignored
   const updateFunction = async (value: S) => {
+    if (initPersistanceIsRunning) {
+      updatesWhileDeserializing.push(value as S);
+      return;
+    }
     if (
       updateFunction.queue.length > 0 &&
       concurrency === "throttle" &&

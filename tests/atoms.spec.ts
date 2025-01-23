@@ -212,6 +212,29 @@ describe("Async transformOnDeserialize", () => {
     expect(a.subject.value).toBe(null);
   });
 
+  it("Initial value should be persisted to local storage immediately", async () => {
+    const localStorageMap = new Map<string, string>();
+    globalThis.localStorage = {
+      getItem: (key: string) => localStorageMap.get(key) ?? null,
+      setItem: (key: string, value: string) => localStorageMap.set(key, value),
+      length: 0,
+      clear: () => localStorageMap.clear(),
+      key: () => "",
+      removeItem: (key: string) => localStorageMap.delete(key),
+    };
+    const a = atom({
+      initialValue: [{ val: 1 }] as { val: number }[],
+      persistKey: "test",
+      appVersion: "1.0.0",
+    });
+
+    await new Promise((res) => setTimeout(res, 100));
+
+    expect(JSON.parse(localStorageMap.get("test") ?? "").data).toEqual([
+      { val: 1 },
+    ]);
+  });
+
   it("Should be possible to run synchronous version of transformOnDeserialize", async () => {
     const localStorageMap = new Map<string, string>();
     localStorageMap.set(
@@ -273,5 +296,70 @@ describe("Async transformOnDeserialize", () => {
     await new Promise((res) => setTimeout(res, 200));
 
     expect(a.subject.value).toStrictEqual([{ val: 1 }, { val: 2 }, { val: 3 }]);
+  });
+
+  it("Should handle localStorage initialization and updates correctly", async () => {
+    const localStorageMap = new Map<string, string>();
+    // Set initial stored value
+    localStorageMap.set(
+      "test",
+      JSON.stringify({
+        data: [{ val: 1 }],
+        version: "1.0.0",
+      }),
+    );
+
+    let setItemCalls: string[] = [];
+    globalThis.localStorage = {
+      getItem: (key: string) => localStorageMap.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        setItemCalls.push(value);
+        localStorageMap.set(key, value);
+      },
+      length: 0,
+      clear: () => localStorageMap.clear(),
+      key: () => "",
+      removeItem: (key: string) => localStorageMap.delete(key),
+    };
+
+    const a = atom({
+      initialValue: [{ val: 100 }] as { val: number }[], // Different from stored value
+      persistKey: "test",
+      appVersion: "1.0.0",
+      transformOnDeserialize: async (value) => {
+        await new Promise((res) => setTimeout(res, 100));
+        return value.map((v: { val: number }) => ({ val: 2 }));
+      },
+    });
+
+    // Should not have saved initialValue to localStorage
+    expect(setItemCalls.length).toBe(0);
+
+    // Initial value should be used until deserialization completes
+    expect(a.subject.value).toEqual([{ val: 100 }]);
+
+    // Update while deserializing is still in progress. This should be queued and be stored after deserialization
+    await a.update([{ val: 3 }]);
+
+    // Should not have saved to localStorage yet (still deserializing)
+    expect(setItemCalls.length).toBe(0);
+
+    // Wait for deserialization to complete
+    await new Promise((res) => setTimeout(res, 400));
+
+    // Now the update should be saved (first localStorage write)
+    expect(setItemCalls.length).toBe(1);
+    expect(JSON.parse(setItemCalls[0])).toEqual({
+      data: [{ val: 3 }],
+      version: "1.0.0",
+    });
+
+    // New updates should save immediately
+    await a.update([{ val: 4 }]);
+    expect(setItemCalls.length).toBe(2);
+    expect(JSON.parse(setItemCalls[1])).toEqual({
+      data: [{ val: 4 }],
+      version: "1.0.0",
+    });
   });
 });
